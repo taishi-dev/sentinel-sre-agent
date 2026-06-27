@@ -31,3 +31,6 @@ gcp-credentials*.json
 # Logs / local scratch
 *.log
 scratch/
+
+# Subagent-driven-development progress ledger (scratch)
+.superpowers/
