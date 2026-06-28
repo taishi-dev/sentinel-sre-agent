@@ -23,7 +23,9 @@ def configure_logging() -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
-    root.handlers.clear()
+    # Remove only previously installed JsonFormatter handlers to avoid
+    # clearing test-framework handlers (e.g., pytest caplog).
+    root.handlers = [h for h in root.handlers if not isinstance(h.formatter, JsonFormatter)]
     root.addHandler(handler)
     root.setLevel(logging.INFO)
 
