@@ -19,6 +19,10 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::starlette.exceptions.StarletteDeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100
@@ -31,3 +35,8 @@ select = ["E", "F", "I", "UP", "B"]
 include = ["src", "tests"]
 typeCheckingMode = "strict"
 pythonVersion = "3.14"
+# httpx uses private _types modules that pyright cannot resolve; scope Unknown*
+# suppressions to tests only so src/ stays fully strict.
+executionEnvironments = [
+    { root = "tests", reportUnknownVariableType = "none", reportUnknownMemberType = "none", reportUnknownArgumentType = "none" },
+]
