@@ -2,11 +2,17 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 from starlette.responses import Response as StarletteResponse
 
-from shop.faults import FaultState
+from shop.faults import FaultState, FaultType
 from shop.logging_config import configure_logging, get_logger, log_event
+
+
+class InjectRequest(BaseModel):
+    fault: str
+    fail_count: int = 3
 
 _logger = get_logger("shop")
 
@@ -50,5 +56,19 @@ def create_app(state: FaultState | None = None) -> FastAPI:
     @app.get("/export")
     def export(user_id: str) -> dict[str, object]:  # type: ignore[misc]  # registered via decorator side-effect
         return {"user_id": user_id, "records": 2}
+
+    @app.post("/admin/inject")
+    def admin_inject(body: InjectRequest) -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
+        try:
+            fault = FaultType(body.fault)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="unknown fault") from None
+        app.state.fault_state.inject(fault, body.fail_count)
+        return {"active": fault.value}
+
+    @app.post("/admin/clear")
+    def admin_clear() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
+        app.state.fault_state.clear()
+        return {"active": FaultType.NONE.value}
 
     return app
