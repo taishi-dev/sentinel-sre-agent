@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Python 3.12 is the target runtime; all code must type-check under **pyright strict**.
+- Python 3.12+ is the target runtime; the project is developed and CI-tested on Python 3.14. All code must type-check under **pyright strict**.
 - **ruff** must pass with no errors on `src/` and `tests/`.
 - Every feature is built **test-first (TDD)**: failing test, then minimal implementation.
 - The `shop` service emits **structured JSON logs to stdout**, one JSON object per line, each containing at minimum `severity`, `message`, and `timestamp` keys (Cloud Logging convention).
@@ -68,7 +68,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 include = ["src", "tests"]
 typeCheckingMode = "strict"
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 ```
 
 - [ ] **Step 2: Create empty package files**
