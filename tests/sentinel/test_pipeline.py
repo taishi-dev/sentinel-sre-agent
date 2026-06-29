@@ -59,6 +59,14 @@ def test_service_not_allowlisted_escalates() -> None:
         _gate(),
     )
     assert d.action is Action.ESCALATE
+    assert d.requires_human is True
+
+
+def test_confidence_exactly_at_threshold_allows_autonomous_rollback() -> None:
+    # confidence == min_confidence (0.8) must NOT escalate (the guard uses strict `<`)
+    d = decide(_incident(), _diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.8), _gate())
+    assert d.action is Action.ROLLBACK
+    assert d.requires_human is False
 
 
 def test_noop_recommendation_is_autonomous_noop() -> None:
