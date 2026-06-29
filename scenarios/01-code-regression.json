@@ -1,0 +1,16 @@
+{
+  "id": "code_regression",
+  "number": 1,
+  "title": "Code regression in new revision",
+  "tier": 1,
+  "labels": {"root_cause_class": "code_regression", "correct_action": "rollback", "requires_human": false},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "TypeError: cannot read property 'total' of undefined at CheckoutService.finalize (checkout.js:42)"},
+      {"severity": "ERROR", "message": "TypeError: cannot read property 'total' of undefined at CheckoutService.finalize (checkout.js:42)"},
+      {"severity": "ERROR", "message": "TypeError: cannot read property 'total' of undefined at CheckoutService.finalize (checkout.js:42)"}
+    ],
+    "metrics": {"error_rate": 0.41, "p95_latency_ms": 320.0},
+    "revisions": ["shop-00021", "shop-00020"]
+  }
+}

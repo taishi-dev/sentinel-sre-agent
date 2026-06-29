@@ -1,0 +1,15 @@
+{
+  "id": "bad_migration",
+  "number": 7,
+  "title": "Bad DB migration / stateful change",
+  "tier": 2,
+  "labels": {"root_cause_class": "bad_migration", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "psql: column \"customer_uuid\" does not exist"},
+      {"severity": "ERROR", "message": "migration 0042 dropped column legacy_id; rollback cannot restore data"}
+    ],
+    "metrics": {"error_rate": 0.55, "p95_latency_ms": 260.0},
+    "revisions": ["shop-00021", "shop-00020"]
+  }
+}

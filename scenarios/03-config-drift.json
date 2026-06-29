@@ -1,0 +1,15 @@
+{
+  "id": "config_drift",
+  "number": 3,
+  "title": "Config / env-var drift",
+  "tier": 2,
+  "labels": {"root_cause_class": "config_drift", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "Missing required env var STRIPE_API_KEY; payment client disabled"},
+      {"severity": "ERROR", "message": "Missing required env var STRIPE_API_KEY; payment client disabled"}
+    ],
+    "metrics": {"error_rate": 0.27, "p95_latency_ms": 190.0},
+    "revisions": ["shop-00020"]
+  }
+}
