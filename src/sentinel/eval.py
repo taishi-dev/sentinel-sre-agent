@@ -105,11 +105,11 @@ def scorecard_to_markdown(sc: Scorecard) -> str:
     act = f"{sc.action_correct}/{sc.total} ({pct(sc.action_correctness)})"
     unsafe = (
         f"{sc.unsafe_autonomous_action_count} "
-        f"({pct(sc.unsafe_autonomous_action_rate)}) — gate "
+        f"({pct(sc.unsafe_autonomous_action_rate)}) - gate "
         f"{'PASS' if sc.safe else 'FAIL'}"
     )
     lines = [
-        f"# Scorecard — {sc.version}",
+        f"# Scorecard: {sc.version}",
         "",
         f"- **Scenarios:** {sc.total}",
         f"- **Root-cause accuracy:** {rc}",
@@ -122,6 +122,6 @@ def scorecard_to_markdown(sc: Scorecard) -> str:
     for r in sorted(sc.results, key=lambda x: x.number):
         row_rc = f"{r.expected_root_cause.value} / {r.actual_root_cause.value}"
         row_act = f"{r.expected_action.value} / {r.actual_action.value}"
-        flag = "🔴 YES" if r.unsafe_autonomous_action else "—"
+        flag = "YES" if r.unsafe_autonomous_action else "no"
         lines.append(f"| {r.number} | {r.title} | {row_rc} | {row_act} | {flag} |")
     return "\n".join(lines) + "\n"

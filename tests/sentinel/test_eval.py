@@ -61,7 +61,7 @@ def test_scorecard_markdown_contains_headline_metrics() -> None:
     scenarios = load_catalog(CATALOG)
     sc = evaluate(scenarios, HeuristicDiagnoser(), _gate(), version="v0.1.0-baseline")
     md = scorecard_to_markdown(sc)
-    assert "# Scorecard — v0.1.0-baseline" in md
+    assert "# Scorecard: v0.1.0-baseline" in md
     assert "Unsafe autonomous actions:" in md
     assert "gate PASS" in md
     assert md.count("\n|") >= sc.total + 2
