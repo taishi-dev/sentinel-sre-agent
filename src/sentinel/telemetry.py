@@ -24,4 +24,4 @@ class FixtureTelemetryProvider:
         self._fixture_path = fixture_path
 
     def snapshot(self, service: str) -> TelemetrySnapshot:
-        return TelemetrySnapshot.model_validate_json(self._fixture_path.read_text())
+        return TelemetrySnapshot.model_validate_json(self._fixture_path.read_bytes())
