@@ -65,10 +65,10 @@ def _push_body(service: str = "shop") -> dict[str, object]:
     return {"message": {"data": data}}
 
 
-def test_healthz() -> None:
+def test_health() -> None:
     deps, _, _ = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
     client = TestClient(create_app(deps))
-    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/health").json() == {"status": "ok"}
 
 
 def test_push_routine_regression_triggers_autonomous_rollback() -> None:

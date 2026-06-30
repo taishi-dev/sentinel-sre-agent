@@ -42,8 +42,8 @@ def create_app(state: FaultState | None = None) -> FastAPI:
         )
         return response
 
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
+    @app.get("/health")
+    def health() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
         return {"status": "ok"}
 
     @app.get("/")

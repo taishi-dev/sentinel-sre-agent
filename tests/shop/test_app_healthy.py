@@ -3,9 +3,9 @@ from fastapi.testclient import TestClient
 from shop.app import create_app
 
 
-def test_healthz() -> None:
+def test_health() -> None:
     client = TestClient(create_app())
-    resp = client.get("/healthz")
+    resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
 
@@ -42,11 +42,11 @@ def test_middleware_logs_request_fields() -> None:
     logger = get_logger("shop")
     logger.addHandler(handler)
     try:
-        TestClient(create_app()).get("/healthz")
+        TestClient(create_app()).get("/health")
     finally:
         logger.removeHandler(handler)
-    req_logs = [r for r in records if getattr(r, "fields", {}).get("path") == "/healthz"]
-    assert req_logs, "expected a request log for /healthz"
+    req_logs = [r for r in records if getattr(r, "fields", {}).get("path") == "/health"]
+    assert req_logs, "expected a request log for /health"
     fields = req_logs[-1].fields  # type: ignore[attr-defined]
     assert fields["method"] == "GET"
     assert fields["status"] == 200

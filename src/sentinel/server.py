@@ -24,8 +24,8 @@ def create_app(deps: SentinelDeps) -> FastAPI:
     app.state.deps = deps
     pipeline = DecisionPipeline(deps.telemetry, deps.diagnoser, deps.gate)
 
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
+    @app.get("/health")
+    def health() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
         return {"status": "ok"}
 
     @app.post("/pubsub/push")
