@@ -14,6 +14,11 @@ def _gate() -> PolicyGate:
     return PolicyGate(
         PolicyConfig(
             autonomous_eligible_services=["shop"],
+            autonomous_eligible_root_causes=[
+                RootCauseClass.CODE_REGRESSION,
+                RootCauseClass.TRANSIENT_BLIP,
+                RootCauseClass.RUNTIME_MISMATCH,
+            ],
             sensitive_root_causes=[RootCauseClass.SECURITY_REGRESSION, RootCauseClass.PII_EXPOSURE],
             min_confidence=0.8,
         )

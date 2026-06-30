@@ -20,12 +20,17 @@ def _gate() -> PolicyGate:
     return PolicyGate(
         PolicyConfig(
             autonomous_eligible_services=["shop"],
+            autonomous_eligible_root_causes=[
+                RootCauseClass.CODE_REGRESSION,
+                RootCauseClass.TRANSIENT_BLIP,
+                RootCauseClass.RUNTIME_MISMATCH,
+            ],
             sensitive_root_causes=[RootCauseClass.SECURITY_REGRESSION, RootCauseClass.PII_EXPOSURE],
         )
     )
 
 
-def test_allows_eligible_service_and_nonsensitive_cause() -> None:
+def test_allows_eligible_service_and_eligible_cause() -> None:
     result = _gate().evaluate(_incident(), _diag(RootCauseClass.CODE_REGRESSION))
     assert result.allowed is True
 
@@ -40,3 +45,11 @@ def test_blocks_sensitive_root_cause() -> None:
     result = _gate().evaluate(_incident(), _diag(RootCauseClass.PII_EXPOSURE))
     assert result.allowed is False
     assert "sensitive" in result.reason.lower()
+
+
+def test_blocks_non_eligible_root_cause() -> None:
+    # config_drift is neither sensitive nor autonomous-eligible: the gate must
+    # deny autonomy so a misdiagnosis into this class can never act on its own.
+    result = _gate().evaluate(_incident(), _diag(RootCauseClass.CONFIG_DRIFT))
+    assert result.allowed is False
+    assert "not autonomous-eligible" in result.reason.lower()

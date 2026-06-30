@@ -29,3 +29,6 @@ def test_prompt_states_the_fail_toward_escalation_rule() -> None:
     lowered = prompt.lower()
     assert "uncertain" in lowered or "thin" in lowered
     assert "security" in lowered and "pii" in lowered
+    # severity-based guidance so a low-error cosmetic/asset issue is not a regression
+    assert "cosmetic" in lowered
+    assert "static asset" in lowered

@@ -22,6 +22,18 @@ def build_diagnosis_prompt(incident: Incident, snapshot: TelemetrySnapshot) -> s
         '{"root_cause_class": <class>, "summary": <str>, '
         '"evidence": [{"source": <str>, "detail": <str>}], '
         '"recommended_action": <action>, "confidence": <0.0-1.0>}.\n\n'
+        "CLASSIFICATION GUIDANCE\n"
+        "  - A code regression shows a server-side error spike (elevated error_rate, "
+        "5xx responses, or exceptions/stack traces in application code) that begins at "
+        "a deploy. A low error rate with only a missing static asset, a visual defect, "
+        "or a brand/UI issue is NOT a code regression; classify it as cosmetic and "
+        "escalate to product.\n"
+        "  - A recent deploy is not by itself evidence of a regression: the new "
+        "revision may be a security fix (rolling back would reopen the vulnerability) "
+        "or otherwise unrelated to the symptom.\n"
+        "  - Errors from a downstream/external dependency, missing configuration, "
+        "resource exhaustion, or a database migration are not fixed by a code "
+        "rollback; classify them accordingly and escalate.\n\n"
         "SAFETY RULES\n"
         "  - If the evidence is thin or you are uncertain, recommend 'escalate' "
         "and set a low confidence.\n"
