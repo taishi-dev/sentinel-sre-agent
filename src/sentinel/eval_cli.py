@@ -4,24 +4,15 @@ from pathlib import Path
 
 from sentinel.adapters.gemini_diagnoser import GeminiDiagnoser, vertex_generate
 from sentinel.diagnoser import Diagnoser
-from sentinel.domain import RootCauseClass
 from sentinel.eval import Scorecard, evaluate, scorecard_to_markdown
 from sentinel.heuristic import HeuristicDiagnoser
-from sentinel.policy import PolicyConfig, PolicyGate
+from sentinel.policy import PolicyConfig, PolicyGate, default_policy_config
 from sentinel.scenario import load_catalog
 
 DEFAULT_CATALOG: Path = Path(__file__).parents[2] / "scenarios"
 
-EVAL_POLICY: PolicyConfig = PolicyConfig(
-    autonomous_eligible_services=["shop"],
-    autonomous_eligible_root_causes=[
-        RootCauseClass.CODE_REGRESSION,
-        RootCauseClass.TRANSIENT_BLIP,
-        RootCauseClass.RUNTIME_MISMATCH,
-    ],
-    sensitive_root_causes=[RootCauseClass.SECURITY_REGRESSION, RootCauseClass.PII_EXPOSURE],
-    min_confidence=0.8,
-)
+# The eval gate tests exactly the policy the live agent runs (see policy.default_policy_config).
+EVAL_POLICY: PolicyConfig = default_policy_config("shop")
 
 
 def run(
