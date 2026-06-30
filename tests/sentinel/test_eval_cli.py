@@ -1,6 +1,20 @@
 from pathlib import Path
 
+from sentinel.diagnoser import FakeDiagnoser
+from sentinel.domain import Action, Diagnosis, Evidence, RootCauseClass
 from sentinel.eval_cli import DEFAULT_CATALOG, main, run
+
+
+def test_run_accepts_injected_diagnoser() -> None:
+    diag = Diagnosis(
+        root_cause_class=RootCauseClass.CODE_REGRESSION,
+        summary="s",
+        evidence=[Evidence(source="logs", detail="d")],
+        recommended_action=Action.ROLLBACK,
+        confidence=0.95,
+    )
+    sc = run(DEFAULT_CATALOG, "x", None, None, diagnoser=FakeDiagnoser(diag))
+    assert sc.total == 10
 
 
 def test_run_writes_json_and_markdown(tmp_path: Path) -> None:
