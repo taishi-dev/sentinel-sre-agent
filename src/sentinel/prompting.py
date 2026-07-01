@@ -42,4 +42,9 @@ def build_diagnosis_prompt(incident: Incident, snapshot: TelemetrySnapshot) -> s
         "an autonomous rollback for those.\n"
         "  - Only recommend 'rollback' for a routine code regression in a recent "
         "revision where rolling back is clearly the safe, low-blast-radius remedy.\n"
+        "  - Conversely, when you ARE confident (>= 0.8) the root cause is a routine "
+        "code regression in a recent revision and the incident is not security, "
+        "privacy, PII, config, or data related, recommend 'rollback' - that is the "
+        "designed remedy. Do not escalate a clear, confident code regression; "
+        "escalation is for uncertainty or sensitive incidents.\n"
     )
