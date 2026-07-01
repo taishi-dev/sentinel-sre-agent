@@ -1,0 +1,34 @@
+{
+  "displayName": "shop 5xx error rate (Sentinel trigger)",
+  "documentation": {
+    "content": "Fires when the shop Cloud Run service returns 5xx responses, notifying the Sentinel agent via the sentinel-alerts Pub/Sub topic.",
+    "mimeType": "text/markdown"
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "shop 5xx request rate > 0",
+      "conditionThreshold": {
+        "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"shop\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class=\"5xx\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "60s",
+            "perSeriesAligner": "ALIGN_RATE"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "notificationChannels": [
+    "projects/sentinel-sre-2026/notificationChannels/13395857036823536516"
+  ],
+  "alertStrategy": {
+    "autoClose": "1800s"
+  }
+}
