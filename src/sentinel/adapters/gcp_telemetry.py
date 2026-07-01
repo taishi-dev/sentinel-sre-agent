@@ -1,9 +1,12 @@
 import json
+import logging
 from collections.abc import Callable, Iterable
 from datetime import UTC
 from typing import cast
 
 from sentinel.telemetry import LogEntry, TelemetrySnapshot
+
+_logger = logging.getLogger("sentinel.telemetry")
 
 # A log reader maps a service name to recent log entries (newest first).
 LogReader = Callable[[str], list[LogEntry]]
@@ -48,6 +51,12 @@ class GcpTelemetryProvider:
     def snapshot(self, service: str) -> TelemetrySnapshot:
         logs = self._log_reader(service)
         revisions = self._revision_lister(service)
+        _logger.info(
+            "telemetry service=%s logs_read=%d revisions=%s",
+            service,
+            len(logs),
+            revisions,
+        )
         return TelemetrySnapshot(logs=logs, metrics=derive_metrics(logs), revisions=revisions)
 
 

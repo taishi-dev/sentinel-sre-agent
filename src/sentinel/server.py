@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 from fastapi import FastAPI, HTTPException, Request
@@ -8,6 +9,8 @@ from sentinel.pipeline import DecisionPipeline
 from sentinel.policy import PolicyGate
 from sentinel.response import ActionExecutor, Notifier, respond
 from sentinel.telemetry import TelemetryProvider
+
+_logger = logging.getLogger("sentinel")
 
 
 @dataclass
@@ -38,7 +41,23 @@ def create_app(deps: SentinelDeps) -> FastAPI:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         decision = pipeline.run(incident)
+        _logger.info(
+            "sentinel decision service=%s action=%s root_cause=%s confidence=%.2f "
+            "requires_human=%s reason=%s",
+            incident.service,
+            decision.action.value,
+            decision.diagnosis.root_cause_class.value,
+            decision.diagnosis.confidence,
+            decision.requires_human,
+            decision.reason,
+        )
         record = respond(incident, decision, deps.executor, deps.notifier)
+        _logger.info(
+            "sentinel responded action=%s executed=%s rollback=%s",
+            record.action.value,
+            record.executed,
+            record.rollback.model_dump() if record.rollback is not None else None,
+        )
         return {
             "action": decision.action.value,
             "requires_human": decision.requires_human,

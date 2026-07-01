@@ -1,3 +1,4 @@
+import logging
 import os
 from collections.abc import Mapping
 
@@ -64,6 +65,17 @@ def build_deps(settings: SentinelSettings) -> SentinelDeps:
     )
 
 
+def _configure_logging() -> None:
+    logger = logging.getLogger("sentinel")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+
 def create_app_from_env() -> FastAPI:
     """Zero-arg factory for `uvicorn sentinel.main:create_app_from_env --factory`."""
+    _configure_logging()
     return create_app(build_deps(load_settings(os.environ)))
