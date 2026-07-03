@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 900" font-family="Segoe UI, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#52606d"/>
+    </marker>
+    <marker id="arrowG" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#15803d"/>
+    </marker>
+    <marker id="arrowL" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1760" height="900" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="48" y="50" font-size="30" font-weight="700" fill="#1f2933">Sentinel — autonomous SRE agent</text>
+  <text x="48" y="78" font-size="15" fill="#6b7280">On a Cloud Monitoring alert: investigate live telemetry, diagnose with Gemini, then autonomously roll back or refuse and escalate — restraint enforced by deterministic code.</text>
+
+  <!-- ============ Monitored target: shop ============ -->
+  <rect x="40" y="150" width="200" height="180" rx="14" fill="#f3f4f6" stroke="#374151" stroke-width="2"/>
+  <text x="140" y="188" font-size="19" font-weight="700" fill="#1f2933" text-anchor="middle">shop service</text>
+  <text x="140" y="212" font-size="13" fill="#52606d" text-anchor="middle">Cloud Run · public</text>
+  <text x="140" y="234" font-size="12" fill="#6b7280" text-anchor="middle">monitored target</text>
+  <text x="140" y="278" font-size="16" font-weight="700" fill="#b91c1c" text-anchor="middle">emitting 5xx</text>
+  <text x="140" y="300" font-size="12" fill="#9a3412" text-anchor="middle">(staged fault)</text>
+
+  <!-- ============ Lane 1: Google Cloud managed services ============ -->
+  <rect x="300" y="92" width="900" height="152" rx="16" fill="#f4f7f9" stroke="#c3d0d9" stroke-width="1.5"/>
+  <text x="320" y="120" font-size="15" font-weight="700" fill="#5b7083">Google Cloud — managed services</text>
+
+  <!-- alert policy -->
+  <rect x="320" y="140" width="250" height="86" rx="10" fill="#eef2f5" stroke="#94a7b5" stroke-width="1.6"/>
+  <text x="445" y="176" font-size="15" font-weight="700" fill="#1f2933" text-anchor="middle">Cloud Monitoring alert policy</text>
+  <text x="445" y="200" font-size="13" fill="#52606d" text-anchor="middle">shop 5xx rate &gt; 0</text>
+
+  <!-- pubsub topic -->
+  <rect x="600" y="140" width="250" height="86" rx="10" fill="#eef2f5" stroke="#94a7b5" stroke-width="1.6"/>
+  <text x="725" y="176" font-size="15" font-weight="700" fill="#1f2933" text-anchor="middle">Pub/Sub topic</text>
+  <text x="725" y="200" font-size="13" fill="#52606d" text-anchor="middle">sentinel-alerts</text>
+
+  <!-- push subscription -->
+  <rect x="880" y="140" width="250" height="86" rx="10" fill="#eef2f5" stroke="#94a7b5" stroke-width="1.6"/>
+  <text x="1005" y="176" font-size="15" font-weight="700" fill="#1f2933" text-anchor="middle">push subscription</text>
+  <text x="1005" y="200" font-size="13" fill="#52606d" text-anchor="middle">OIDC authenticated</text>
+
+  <!-- lane 1 flow arrows -->
+  <line x1="570" y1="183" x2="596" y2="183" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <line x1="850" y1="183" x2="876" y2="183" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- shop -> alert policy -->
+  <line x1="240" y1="205" x2="316" y2="185" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="278" y="165" font-size="12" font-weight="600" fill="#b91c1c" text-anchor="middle">5xx</text>
+
+  <!-- ============ Lane 2: Sentinel agent (trust boundary) ============ -->
+  <rect x="40" y="360" width="1160" height="252" rx="18" fill="#f3f4fd" stroke="#4f46e5" stroke-width="2" stroke-dasharray="9 6"/>
+  <text x="62" y="390" font-size="15" font-weight="700" fill="#4f46e5">Sentinel agent — Cloud Run · authenticated-only ingress · least-privilege service account</text>
+
+  <!-- POST /pubsub/push -->
+  <rect x="70" y="460" width="250" height="100" rx="10" fill="#eef0fb" stroke="#4f46e5" stroke-width="1.8"/>
+  <text x="195" y="502" font-size="15" font-weight="700" fill="#312e81" text-anchor="middle">POST /pubsub/push</text>
+  <text x="195" y="526" font-size="12" fill="#52606d" text-anchor="middle">webhook entrypoint</text>
+
+  <!-- investigate -->
+  <rect x="350" y="460" width="250" height="100" rx="10" fill="#eef0fb" stroke="#4f46e5" stroke-width="1.8"/>
+  <text x="475" y="498" font-size="15" font-weight="700" fill="#312e81" text-anchor="middle">investigate</text>
+  <text x="475" y="522" font-size="12" fill="#52606d" text-anchor="middle">Cloud Logging +</text>
+  <text x="475" y="540" font-size="12" fill="#52606d" text-anchor="middle">Cloud Run revisions</text>
+
+  <!-- diagnose -->
+  <rect x="630" y="460" width="250" height="100" rx="10" fill="#eef0fb" stroke="#4f46e5" stroke-width="1.8"/>
+  <text x="755" y="498" font-size="15" font-weight="700" fill="#312e81" text-anchor="middle">diagnose</text>
+  <text x="755" y="522" font-size="12" fill="#52606d" text-anchor="middle">Gemini 2.5 Flash</text>
+  <text x="755" y="540" font-size="12" fill="#52606d" text-anchor="middle">on Vertex AI</text>
+
+  <!-- policy gate -->
+  <rect x="910" y="460" width="268" height="100" rx="10" fill="#e5e7fb" stroke="#4f46e5" stroke-width="2.2"/>
+  <text x="1044" y="490" font-size="14" font-weight="700" fill="#312e81" text-anchor="middle">policy gate — two gates</text>
+  <text x="1044" y="512" font-size="11.5" fill="#4338ca" text-anchor="middle">1 · deterministic: sensitive-class block</text>
+  <text x="1044" y="528" font-size="11.5" fill="#4338ca" text-anchor="middle">+ autonomy allowlist</text>
+  <text x="1044" y="548" font-size="11.5" fill="#4338ca" text-anchor="middle">2 · confidence ≥ 0.8</text>
+
+  <!-- lane 2 flow arrows -->
+  <line x1="320" y1="510" x2="346" y2="510" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="510" x2="626" y2="510" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <line x1="880" y1="510" x2="906" y2="510" stroke="#52606d" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- push subscription -> POST /pubsub/push (routed handoff into the trust boundary) -->
+  <path d="M1005,226 L1005,345 L55,345 L55,510 L66,510" fill="none" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="520" y="337" font-size="12" font-weight="600" fill="#4f46e5" text-anchor="middle">alert delivered to agent (OIDC push)</text>
+
+  <!-- ============ Lane 3: Outcomes ============ -->
+  <rect x="1240" y="360" width="480" height="430" rx="18" fill="#fbfbfc" stroke="#d7dbe0" stroke-width="1.5"/>
+  <text x="1262" y="390" font-size="15" font-weight="700" fill="#374151">Outcomes</text>
+
+  <!-- rollback -->
+  <rect x="1270" y="410" width="430" height="100" rx="10" fill="#eafaf0" stroke="#15803d" stroke-width="2"/>
+  <text x="1485" y="450" font-size="17" font-weight="700" fill="#14532d" text-anchor="middle">autonomous rollback</text>
+  <text x="1485" y="476" font-size="12.5" fill="#166534" text-anchor="middle">shift Cloud Run traffic to the previous revision</text>
+
+  <!-- escalate -->
+  <rect x="1270" y="530" width="430" height="100" rx="10" fill="#fef6e7" stroke="#b45309" stroke-width="2"/>
+  <text x="1485" y="570" font-size="17" font-weight="700" fill="#7c2d12" text-anchor="middle">escalate to a human</text>
+  <text x="1485" y="596" font-size="12.5" fill="#9a3412" text-anchor="middle">Slack [ESCALATION]</text>
+
+  <!-- noop / observe (lighter) -->
+  <rect x="1270" y="650" width="430" height="100" rx="10" fill="#f9fafb" stroke="#c3c9d0" stroke-width="1.5" stroke-dasharray="7 5" opacity="0.75"/>
+  <text x="1485" y="690" font-size="15" font-weight="700" fill="#6b7280" text-anchor="middle" opacity="0.85">noop / observe</text>
+  <text x="1485" y="714" font-size="12.5" fill="#9ca3af" text-anchor="middle">Slack [OBSERVE]</text>
+
+  <!-- gate -> outcomes -->
+  <line x1="1178" y1="500" x2="1266" y2="460" stroke="#15803d" stroke-width="2.4" marker-end="url(#arrowG)"/>
+  <line x1="1178" y1="512" x2="1266" y2="580" stroke="#b45309" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <line x1="1178" y1="524" x2="1266" y2="700" stroke="#9ca3af" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#arrowL)"/>
+
+  <!-- rollback -> shop (control loop return) -->
+  <path d="M1700,470 L1730,470 L1730,835 L20,835 L20,235 L36,235" fill="none" stroke="#15803d" stroke-width="2.2" marker-end="url(#arrowG)"/>
+  <text x="752" y="825" font-size="13" font-weight="600" fill="#15803d" text-anchor="middle">autonomous rollback: traffic returns to the previous revision on the shop service</text>
+
+  <!-- Footer -->
+  <text x="48" y="882" font-size="13" fill="#6b7280">Sentinel — autonomous SRE agent · DevOps × AI Agent Hackathon 2026</text>
+</svg>
