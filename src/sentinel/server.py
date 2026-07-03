@@ -96,7 +96,18 @@ def create_app(deps: SentinelDeps) -> FastAPI:
             decision.requires_human,
             decision.reason,
         )
-        record = respond(incident, decision, deps.executor, deps.notifier)
+        try:
+            record = respond(incident, decision, deps.executor, deps.notifier)
+        except Exception as exc:
+            # Defense in depth: respond() absorbs executor/notifier failures
+            # itself; if it ever raises anyway, escalate and return 200 —
+            # otherwise the dedup cache would swallow the redelivery and the
+            # incident would drop silently.
+            _logger.exception("sentinel response phase failed service=%s", incident.service)
+            notify_safely(
+                deps.notifier, format_diagnosis_failure(incident, f"response phase failed: {exc}")
+            )
+            return {"action": "escalate", "requires_human": True, "executed": False}
         _logger.info(
             "sentinel responded action=%s executed=%s rollback=%s",
             record.action.value,

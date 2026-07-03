@@ -152,6 +152,21 @@ def test_push_dedup_expires_after_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ex.rollback_calls == ["shop", "shop"]
 
 
+def test_push_response_phase_failure_escalates_and_returns_200(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _boom(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("respond blew up")
+
+    monkeypatch.setattr(server_module, "respond", _boom)
+    deps, _, no = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
+    client = TestClient(create_app(deps))
+    resp = client.post("/pubsub/push", json=_push_body(message_id="m9"))
+    assert resp.status_code == 200
+    assert resp.json() == {"action": "escalate", "requires_human": True, "executed": False}
+    assert "respond blew up" in no.messages[0]
+
+
 def test_push_redelivered_malformed_body_is_deduplicated() -> None:
     deps, _, _ = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
     client = TestClient(create_app(deps))

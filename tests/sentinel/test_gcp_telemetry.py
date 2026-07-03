@@ -68,7 +68,7 @@ def test_snapshot_assembles_from_injected_readers() -> None:
     assert seen == {"log": "shop", "rev": "shop"}
 
 
-def testnames_newest_first_sorts_by_create_time() -> None:
+def test_names_newest_first_sorts_by_create_time() -> None:
     revs = [
         _Rev(name="parent/shop-00001", create_time=_ts(1)),
         _Rev(name="parent/shop-00003", create_time=_ts(3)),
@@ -77,12 +77,12 @@ def testnames_newest_first_sorts_by_create_time() -> None:
     assert names_newest_first(revs) == ["shop-00003", "shop-00002", "shop-00001"]
 
 
-def testnames_newest_first_keeps_order_when_no_create_time() -> None:
+def test_names_newest_first_keeps_order_when_no_create_time() -> None:
     revs = [_RevNoTime(name="parent/shop-00002"), _RevNoTime(name="parent/shop-00001")]
     assert names_newest_first(revs) == ["shop-00002", "shop-00001"]
 
 
-def testnames_newest_first_keeps_order_on_mixed_input() -> None:
+def test_names_newest_first_keeps_order_on_mixed_input() -> None:
     revs: list[object] = [
         _Rev(name="parent/shop-00001", create_time=_ts(1)),
         _RevNoTime(name="parent/shop-00002"),
@@ -90,5 +90,5 @@ def testnames_newest_first_keeps_order_on_mixed_input() -> None:
     assert names_newest_first(revs) == ["shop-00001", "shop-00002"]
 
 
-def testnames_newest_first_empty_input() -> None:
+def test_names_newest_first_empty_input() -> None:
     assert names_newest_first([]) == []
