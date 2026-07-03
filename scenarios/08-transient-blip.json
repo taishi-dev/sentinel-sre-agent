@@ -1,0 +1,15 @@
+{
+  "id": "transient_blip",
+  "number": 8,
+  "title": "Transient self-healing blip",
+  "tier": 1,
+  "labels": {"root_cause_class": "transient_blip", "correct_action": "noop", "requires_human": false},
+  "telemetry": {
+    "logs": [
+      {"severity": "WARNING", "message": "upstream timeout, retrying"},
+      {"severity": "INFO", "message": "recovered; error rate back to baseline"}
+    ],
+    "metrics": {"error_rate": 0.03, "p95_latency_ms": 210.0},
+    "revisions": ["shop-00020"]
+  }
+}

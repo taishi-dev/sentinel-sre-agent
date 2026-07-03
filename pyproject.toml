@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "sentinel"
 version = "0.1.0"
@@ -6,6 +10,10 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
+    "pydantic>=2",
+    "google-genai>=1.0",
+    "google-cloud-logging>=3.0",
+    "google-cloud-run>=0.10",
 ]
 
 [project.optional-dependencies]
@@ -15,6 +23,9 @@ dev = [
     "ruff>=0.6",
     "pyright>=1.1.380",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

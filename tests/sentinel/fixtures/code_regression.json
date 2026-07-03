@@ -1,0 +1,8 @@
+{
+  "logs": [
+    {"severity": "ERROR", "message": "NullPointer: order.total in CheckoutService.finalize()"},
+    {"severity": "ERROR", "message": "NullPointer: order.total in CheckoutService.finalize()"}
+  ],
+  "metrics": {"error_rate": 0.42, "p95_latency_ms": 180.0},
+  "revisions": ["shop-0008", "shop-0007"]
+}

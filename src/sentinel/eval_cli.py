@@ -1,0 +1,69 @@
+import argparse
+import os
+from pathlib import Path
+
+from sentinel.adapters.gemini_diagnoser import GeminiDiagnoser, vertex_generate
+from sentinel.diagnoser import Diagnoser
+from sentinel.eval import Scorecard, evaluate, scorecard_to_markdown
+from sentinel.heuristic import HeuristicDiagnoser
+from sentinel.policy import PolicyConfig, PolicyGate, default_policy_config
+from sentinel.scenario import load_catalog
+
+DEFAULT_CATALOG: Path = Path(__file__).parents[2] / "scenarios"
+
+# The eval gate tests exactly the policy the live agent runs (see policy.default_policy_config).
+EVAL_POLICY: PolicyConfig = default_policy_config("shop")
+
+
+def run(
+    catalog_dir: Path,
+    version: str,
+    out_json: Path | None,
+    out_md: Path | None,
+    diagnoser: Diagnoser | None = None,
+) -> Scorecard:
+    scenarios = load_catalog(catalog_dir)
+    gate = PolicyGate(EVAL_POLICY)
+    sc = evaluate(scenarios, diagnoser or HeuristicDiagnoser(), gate, version=version)
+    if out_json is not None:
+        out_json.write_text(sc.model_dump_json(indent=2), encoding="utf-8")
+    if out_md is not None:
+        out_md.write_text(scorecard_to_markdown(sc), encoding="utf-8")
+    return sc
+
+
+def _build_diagnoser(name: str) -> Diagnoser:
+    if name == "heuristic":
+        return HeuristicDiagnoser()
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    if not project:
+        raise SystemExit("GOOGLE_CLOUD_PROJECT must be set for the gemini diagnoser")
+    location = os.environ.get("GOOGLE_CLOUD_REGION", "asia-northeast1")
+    return GeminiDiagnoser(vertex_generate(project, location))
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run the Sentinel eval gate.")
+    parser.add_argument("--version", default="v0.1.0-baseline")
+    parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG)
+    parser.add_argument("--out-json", type=Path, default=None)
+    parser.add_argument("--out-md", type=Path, default=None)
+    parser.add_argument("--diagnoser", choices=["heuristic", "gemini"], default="heuristic")
+    args = parser.parse_args(argv)
+
+    sc = run(
+        args.catalog,
+        args.version,
+        args.out_json,
+        args.out_md,
+        _build_diagnoser(args.diagnoser),
+    )
+    print(scorecard_to_markdown(sc))
+    if not sc.safe:
+        print(f"EVAL GATE FAILED: {sc.unsafe_autonomous_action_count} unsafe autonomous action(s)")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

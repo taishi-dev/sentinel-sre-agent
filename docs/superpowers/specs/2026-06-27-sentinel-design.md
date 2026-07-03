@@ -205,6 +205,12 @@ A standalone experiment in its own branch family, parallel to the `Vn-<idea>` pr
 
 ## 17. Open questions
 
-- Confirm whether managed credentials and quota for Gemini, Cloud Run, and Vertex AI are available within the hackathon's provided environment.
-- Confirm the exact Slack workspace and channel for notifications.
+Resolved (2026-06-28):
+- **Region:** `asia-northeast1` (Tokyo) — lowest latency for the Japan-based event, in-region data.
+- **Gemini access:** Vertex AI via Application Default Credentials (ADC) — no API key to manage; aligns with the `exp-finetune` Vertex requirement. Requires enabling `aiplatform.googleapis.com`.
+- **GCP project:** to be supplied by the user (non-secret project ID).
+
+Still open:
+- Confirm Gemini model quota in `asia-northeast1` for the chosen model.
+- Confirm the exact Slack workspace and channel; webhook URL supplied via gitignored `.env` / Secret Manager (never pasted in chat).
 - Decide the SLO threshold and alert policy parameters that make the live demo reliable without being trivially noisy.

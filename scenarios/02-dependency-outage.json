@@ -1,0 +1,16 @@
+{
+  "id": "dependency_outage",
+  "number": 2,
+  "title": "Downstream dependency outage",
+  "tier": 1,
+  "labels": {"root_cause_class": "dependency_outage", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "HTTP 503 from payment-gateway.example.com: upstream connect error"},
+      {"severity": "ERROR", "message": "HTTP 503 from payment-gateway.example.com: upstream connect error"},
+      {"severity": "WARNING", "message": "retry 3/3 exhausted calling payment-gateway"}
+    ],
+    "metrics": {"error_rate": 0.38, "p95_latency_ms": 5200.0},
+    "revisions": ["shop-00020"]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "pii_exposure",
+  "number": 5,
+  "title": "PII / data exposure",
+  "tier": 1,
+  "labels": {"root_cause_class": "pii_exposure", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "WARNING", "message": "PII detected in access log: card_number and email serialized in /admin/export.csv"},
+      {"severity": "WARNING", "message": "response payload included full customer record (SSN, email) for /orders"}
+    ],
+    "metrics": {"error_rate": 0.02, "p95_latency_ms": 160.0},
+    "revisions": ["shop-00021", "shop-00020"]
+  }
+}

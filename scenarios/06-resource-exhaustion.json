@@ -1,0 +1,15 @@
+{
+  "id": "resource_exhaustion",
+  "number": 6,
+  "title": "Resource exhaustion / load spike",
+  "tier": 2,
+  "labels": {"root_cause_class": "resource_exhaustion", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "OOMKilled: container exceeded memory limit 512Mi"},
+      {"severity": "WARNING", "message": "GC pause 1200ms; heap at 98%"}
+    ],
+    "metrics": {"error_rate": 0.30, "p95_latency_ms": 4800.0},
+    "revisions": ["shop-00020"]
+  }
+}

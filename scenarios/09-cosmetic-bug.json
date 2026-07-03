@@ -1,0 +1,14 @@
+{
+  "id": "cosmetic",
+  "number": 9,
+  "title": "Cosmetic / brand-facing bug",
+  "tier": 2,
+  "labels": {"root_cause_class": "cosmetic", "correct_action": "escalate", "requires_human": true},
+  "telemetry": {
+    "logs": [
+      {"severity": "WARNING", "message": "render: footer logo 404 /assets/logo-v2.png after deploy shop-00021"}
+    ],
+    "metrics": {"error_rate": 0.04, "p95_latency_ms": 150.0},
+    "revisions": ["shop-00021", "shop-00020"]
+  }
+}

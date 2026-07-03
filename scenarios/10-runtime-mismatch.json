@@ -1,0 +1,15 @@
+{
+  "id": "runtime_mismatch",
+  "number": 10,
+  "title": "Runtime / environment mismatch",
+  "tier": 2,
+  "labels": {"root_cause_class": "runtime_mismatch", "correct_action": "rollback", "requires_human": false},
+  "telemetry": {
+    "logs": [
+      {"severity": "ERROR", "message": "exec /usr/local/bin/python: exec format error"},
+      {"severity": "ERROR", "message": "ImportError: libssl.so.3: cannot open shared object file"}
+    ],
+    "metrics": {"error_rate": 0.60, "p95_latency_ms": 0.0},
+    "revisions": ["shop-00021", "shop-00020"]
+  }
+}
