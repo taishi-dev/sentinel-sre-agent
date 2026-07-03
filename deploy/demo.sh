@@ -54,6 +54,8 @@ restore() {
   echo "  shop /health = $(_health)"
 }
 
+# Between takes/runs: stray 5xx or retried Pub/Sub messages can trigger spurious
+# rollbacks, and shop fault state is in-memory per instance -- always reset + restore.
 reset() {
   echo "RESET  dropping any queued alerts"
   "$GCLOUD" pubsub subscriptions seek "$SUBSCRIPTION" --time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --project "$PROJECT" >/dev/null
