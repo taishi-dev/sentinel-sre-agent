@@ -26,13 +26,41 @@ def format_action_report(
     from_revision: str,
     to_revision: str,
 ) -> str:
-    status = "recovery confirmed" if recovered else "recovery NOT confirmed"
+    status = (
+        "recovery confirmed" if recovered else "verification pending (manual check recommended)"
+    )
     return (
         "[AUTONOMOUS ROLLBACK] Sentinel acted.\n"
         f"{_header(incident, decision)}\n"
         f"rolled back traffic: {from_revision} -> {to_revision}\n"
         f"post-rollback: {status}\n"
         f"reason: {decision.reason}"
+    )
+
+
+def format_rollback_failure(
+    incident: Incident,
+    decision: Decision,
+    detail: str,
+    from_revision: str,
+    to_revision: str,
+) -> str:
+    attempted = f"{from_revision} -> {to_revision}" if from_revision or to_revision else "n/a"
+    return (
+        "[ESCALATION] Sentinel needs a human.\n"
+        f"{_header(incident, decision)}\n"
+        f"rollback FAILED: {detail}\n"
+        f"attempted traffic shift: {attempted}\n"
+        f"reason: {decision.reason}"
+    )
+
+
+def format_diagnosis_failure(incident: Incident, error: str) -> str:
+    return (
+        "[ESCALATION] Sentinel needs a human.\n"
+        f"service: {incident.service} | alert: {incident.alert}\n"
+        f"diagnosis failed: {error}\n"
+        "no action taken; investigate manually"
     )
 
 
