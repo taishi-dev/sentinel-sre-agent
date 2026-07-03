@@ -4,7 +4,9 @@
 **Author:** solo entrant
 **Date:** 2026-06-27
 **Submission deadline:** 2026-07-10 · **Final pitch:** 2026-08-19
-**Status:** approved concept, pre-implementation
+**Status:** implemented and live-verified (v0.3.1 — offline eval 10/10 with zero unsafe actions; live trial 5/5 autonomous rollbacks)
+
+> **Updated 2026-07-03** to describe the v0.3.1 implementation as built; the pre-implementation draft is preserved in git history. Main changes: the agent calls Gemini through the `google-genai` SDK on Vertex AI (no ADK); investigation is a single telemetry snapshot plus one structured Gemini call (the multi-step tool-calling loop moved to the roadmap); automated post-rollback recovery verification moved to the roadmap; §11 now describes the CI pipeline as it exists.
 
 ---
 
@@ -18,7 +20,7 @@ The competitive framing: Google's built-in auto-rollback is the naive baseline S
 
 ## 2. Goals
 
-- Demonstrate a genuinely autonomous agent: event-triggered, multi-step investigation, decision, action, verification, with no human in the loop to start it.
+- Demonstrate a genuinely autonomous agent: event-triggered investigation, decision, and action, with no human in the loop to start it.
 - Make the safety story defensible: the agent knows the limits of its own authority and fails toward escalation.
 - Hit all three judging pillars: Build (autonomous agent), Run (CI/CD plus continuous improvement), Deliver (production deployment on Cloud Run).
 - Over-invest in the Run pillar, where most teams are weak, via a measurable eval gate.
@@ -34,7 +36,7 @@ The competitive framing: Google's built-in auto-rollback is the naive baseline S
 ## 4. Domain glossary (ubiquitous language)
 
 - **Incident:** an SLO breach detected on the monitored service that wakes the agent.
-- **Investigation:** the agent's multi-step, evidence-gathering loop over telemetry.
+- **Investigation:** the agent's evidence read over telemetry (recent logs plus the revision list), assembled into one snapshot for diagnosis.
 - **Diagnosis:** the structured output of the investigation (root-cause class, evidence citations, recommended action, confidence).
 - **Autonomous-eligible incident:** an incident that passes both the deterministic policy gate and the LLM gate (a high-confidence routine operational regression on an allowlisted service). The agent acts on its own.
 - **Escalation incident:** anything else. The agent diagnoses and recommends but does not act.
@@ -58,18 +60,18 @@ Two containerized services on Cloud Run, native GCP telemetry, event-driven.
                                             |  push (authenticated POST)
                                             v
                               [ sentinel agent service ]
-                              ADK + Gemini investigation loop
+                         telemetry snapshot -> Gemini diagnosis
                                             |
         +-----------------------------------+-----------------------------------+
         v                                   v                                   v
-  query logs / metrics /          TWO-GATE SAFETY                  Slack (escalations
-  revisions (ADK tools)        1. deterministic policy              + action reports)
-                               2. LLM (downgrade-only)
+  read logs + revisions           TWO-GATE SAFETY                  Slack (escalations
+  (injected readers over       1. deterministic policy              + action reports)
+   Cloud Logging / Run)        2. confidence floor (downgrade-only)
                                             |
                        +--------------------+--------------------+
                        v                                         v
             AUTONOMOUS: Cloud Run traffic            ESCALATE: post diagnosis +
-            rollback -> verify recovery -> report    recommendation, take no action
+            rollback -> report                       recommendation, take no action
 ```
 
 The `sentinel` service account is scoped to read logs and metrics and to shift traffic on the `shop` service only. It has no authority over any other resource.
@@ -81,13 +83,15 @@ The `sentinel` service account is scoped to read logs and metrics and to shift t
 
 ## 6. The agentic loop (Build pillar)
 
-1. **Detect.** A Cloud Monitoring alert policy fires on an SLO breach and publishes to a Pub/Sub topic. Pub/Sub push delivers an authenticated POST to the `sentinel` endpoint. No human starts it.
-2. **Investigate.** A Gemini-driven ADK loop composes tool calls (`query_logs`, `query_metrics`, `get_revisions`, `get_deploy_diff`), choosing the next query based on what it just found. Bounded by a maximum iteration count.
-3. **Diagnose.** The agent emits structured output validated by a Pydantic schema: root-cause class, evidence citations, recommended action, confidence score.
+1. **Detect.** A Cloud Monitoring alert policy fires on an SLO breach and publishes to a Pub/Sub topic. Pub/Sub push delivers an authenticated POST to the `sentinel` endpoint. No human starts it. Redelivered messages are deduplicated by message id.
+2. **Investigate.** The agent reads one telemetry snapshot: recent Cloud Logging entries (structured payloads serialized whole so stack traces reach the model) plus the service's revision list, newest first.
+3. **Diagnose.** One Gemini call (structured JSON output, temperature 0) validated by a Pydantic schema: root-cause class, evidence citations, recommended action, confidence score. Unparseable output — and any failure of the telemetry read or the Gemini call itself — fails toward escalation.
 4. **Gate.** Two gates evaluate, failing toward escalation:
-   - **Deterministic policy gate (first, no LLM):** a config-driven allowlist of services and paths eligible for autonomous action. Sensitive paths (auth, payments, PII, data export) are hard-blocked. The LLM cannot override this.
-   - **LLM gate (second, downgrade-only):** can only move the decision toward escalation, never grant autonomy the policy denied. Low confidence or thin evidence forces escalation.
-5. **Act or escalate.** If autonomous-eligible, shift `shop` traffic to the previous known-good revision, wait, re-read metrics to confirm recovery, and post a report to Slack. Otherwise, post an escalation with full reasoning and take no action.
+   - **Deterministic policy gate (first, no LLM):** a config-driven allowlist of services and root-cause classes eligible for autonomous action; sensitive classes (security, PII) are hard-blocked. The LLM cannot override this.
+   - **Confidence gate (second, downgrade-only):** diagnosis confidence below 0.8 forces escalation. The pipeline can only move the decision toward escalation, never grant autonomy the policy denied.
+5. **Act or escalate.** If autonomous-eligible, shift `shop` traffic to the previous revision (revisions sorted newest-first by create time) and post a report to Slack; a failed shift is reported as an escalation, never as an action taken. Otherwise, post an escalation with full reasoning and take no action.
+
+**Roadmap (designed, not built):** a multi-step investigation loop (Gemini-composed tool calls such as `query_logs`, `query_metrics`, `get_revisions`, `get_deploy_diff`, choosing the next query from what was just found, bounded by an iteration cap) and automated post-rollback recovery verification (wait, re-read metrics, confirm). The v0.3.1 action report marks recovery as "verification pending (manual check recommended)".
 
 ## 7. Two-gate safety model
 
@@ -149,17 +153,17 @@ Release flow: feature into develop, cut a release branch (only fixes, docs, and 
 
 ## 11. CI/CD pipeline (Run and Deliver)
 
-GitHub Actions, two distinct test layers.
+GitHub Actions, two jobs, both hermetic (no GCP credentials in CI).
 
-1. **Cross-OS unit matrix** on `ubuntu-latest` and `windows-latest`. Runs pyright (strict), ruff, and fast hermetic tests only: the deterministic policy gate, diagnosis parsing, and scoring functions. No GCP calls. This guards the gap between the Windows development box and the Linux production runtime.
-2. **Linux-only eval gate** on `ubuntu-latest`. Runs the Scenario Catalog with the zero-unsafe-action rule, using GCP credentials via Workload Identity Federation. macOS is excluded; the production runtime is Linux.
+1. **Cross-OS unit matrix** on `ubuntu-latest` and `windows-latest`. Runs pyright (strict), ruff, and the full test suite. No GCP calls. This guards the gap between the Windows development box and the Linux production runtime.
+2. **Hermetic eval gate** on `ubuntu-latest`. Runs the Scenario Catalog through the heuristic diagnoser with the zero-unsafe-action rule; a single unsafe autonomous action fails the job. The Gemini diagnoser's accuracy is verified by manually-run evals recorded in `scorecards/` (the CI gate guards the policy/decision logic, not the model).
 
-On a release branch the pipeline builds both container images, runs the eval gate, deploys each image to Cloud Run as a new revision, and tags `main`.
+Deployment is manual, via the reproducible recipe in `deploy/trigger-setup.md`. (The original design called for Workload-Identity-Federation credentials in CI and an automated release-branch build-and-deploy job; both remain roadmap items.)
 
 ## 12. Tech stack
 
-- **Language:** Python. Chosen for the most mature ADK support (reference implementation, most samples, the hackathon bootcamp is Python), the most mature ADK eval framework, and a Python-first Vertex AI SDK that smooths the `exp-finetune` side project. To recover the strict-review discipline that a statically typed language would give for free: pyright runs in strict mode as a CI gate (type errors fail the build), Pydantic validates the model's structured output at runtime (the one genuinely risky boundary), the gate decision is an `enum` guarded by `typing.assert_never` for exhaustiveness, and ruff lints in the cross-OS unit job.
-- **Agent framework:** ADK (official TypeScript support) with the Gemini API.
+- **Language:** Python. Chosen for the most mature Google AI tooling (the hackathon bootcamp is Python) and a Python-first Vertex AI SDK that smooths the `exp-finetune` side project. To recover the strict-review discipline that a statically typed language would give for free: pyright runs in strict mode as a CI gate (type errors fail the build), Pydantic validates the model's structured output at runtime (the one genuinely risky boundary), the gate decision is an `enum` guarded by `typing.assert_never` for exhaustiveness, and ruff lints in the cross-OS unit job.
+- **Model access:** Gemini 2.5 Flash through the `google-genai` SDK on Vertex AI (Application Default Credentials; structured JSON output; temperature 0). No agent framework: the loop is hand-wired FastAPI + a ports-and-adapters decision pipeline, which keeps the whole decision path offline-testable.
 - **Runtime:** Cloud Run (two services).
 - **Telemetry:** Cloud Logging and Cloud Monitoring.
 - **Trigger:** Cloud Monitoring alert policy, Pub/Sub notification channel, push subscription.
@@ -182,15 +186,15 @@ A standalone experiment in its own branch family, parallel to the `Vn-<idea>` pr
 **MVP, covering all three pillars:**
 
 1. `shop` victim plus four live-injectable scenarios.
-2. `sentinel` agent: ADK plus Gemini investigation loop with structured diagnosis output.
-3. Two-gate safety (deterministic policy plus LLM downgrade-only).
-4. Rollback plus post-rollback verification.
+2. `sentinel` agent: telemetry snapshot plus Gemini diagnosis with structured output.
+3. Two-gate safety (deterministic policy plus confidence floor, downgrade-only).
+4. Rollback with an honest action report (automated post-rollback verification is roadmap; the report says so).
 5. Monitoring to Pub/Sub to agent trigger (event-driven, no human start).
 6. Slack escalation and action reports (single channel).
 7. Scenario Catalog plus eval harness with the three metrics.
 8. Gitflow CI/CD with the zero-unsafe-action safety gate.
 
-**Stretch, stated as roadmap, not built:** human-approval UI, multi-agent ADK decomposition, a metrics dashboard, more than four live scenarios, the V2 line, remediation beyond rollback, and the `exp-finetune` spike.
+**Stretch, stated as roadmap, not built:** human-approval UI, a multi-step investigation loop (see §6 roadmap), automated post-rollback recovery verification, a metrics dashboard, more than four live scenarios, the V2 line, remediation beyond rollback, and the `exp-finetune` spike.
 
 ## 15. Time-risk flags
 
@@ -208,9 +212,9 @@ A standalone experiment in its own branch family, parallel to the `Vn-<idea>` pr
 Resolved (2026-06-28):
 - **Region:** `asia-northeast1` (Tokyo) — lowest latency for the Japan-based event, in-region data.
 - **Gemini access:** Vertex AI via Application Default Credentials (ADC) — no API key to manage; aligns with the `exp-finetune` Vertex requirement. Requires enabling `aiplatform.googleapis.com`.
-- **GCP project:** to be supplied by the user (non-secret project ID).
+- **GCP project:** `sentinel-sre-2026`.
 
-Still open:
-- Confirm Gemini model quota in `asia-northeast1` for the chosen model.
-- Confirm the exact Slack workspace and channel; webhook URL supplied via gitignored `.env` / Secret Manager (never pasted in chat).
-- Decide the SLO threshold and alert policy parameters that make the live demo reliable without being trivially noisy.
+Resolved (2026-07-03):
+- **Gemini model quota in `asia-northeast1`:** confirmed in practice — Gemini 2.5 Flash served every call in the offline evals and the 5/5 live trial (`scorecards/v0.3.1-live-trial.md`).
+- **Slack webhook:** stored in Secret Manager as `sentinel-slack-webhook`, injected into the sentinel service at deploy time (`deploy/trigger-setup.md`).
+- **Alert policy parameters:** any 5xx on the shop service — `run.googleapis.com/request_count` with `response_code_class="5xx"`, 60-second `ALIGN_RATE`, threshold greater than 0, auto-close 1800 seconds (`deploy/alert-policy.json`). Deliberately trigger-happy for the demo; between staged runs, `deploy/demo.sh reset` clears queued alerts.
