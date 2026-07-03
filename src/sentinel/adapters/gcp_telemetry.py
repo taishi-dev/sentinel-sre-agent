@@ -1,7 +1,7 @@
 import json
 import logging
 from collections.abc import Callable, Iterable
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import cast
 
 from sentinel.telemetry import LogEntry, TelemetrySnapshot
@@ -60,6 +60,22 @@ class GcpTelemetryProvider:
         return TelemetrySnapshot(logs=logs, metrics=derive_metrics(logs), revisions=revisions)
 
 
+def names_newest_first(revisions: Iterable[object]) -> list[str]:
+    """Revision names sorted newest-first by create_time.
+
+    The rollback executor picks revisions[1] as the target, so ordering is
+    load-bearing: sort explicitly instead of trusting the SDK's default order.
+    If ANY revision lacks a create_time, keep the whole input order (the API's
+    documented default is newest first; a partial sort key would raise).
+    """
+    revs = list(revisions)
+    times = [getattr(rev, "create_time", None) for rev in revs]
+    if all(t is not None for t in times):
+        order = sorted(range(len(revs)), key=lambda i: cast("datetime", times[i]), reverse=True)
+        revs = [revs[i] for i in order]
+    return [str(getattr(rev, "name", "")).split("/")[-1] for rev in revs]
+
+
 def cloud_run_revision_lister(project: str, location: str) -> RevisionLister:
     """Build a revision lister backed by the Cloud Run Admin API (newest first)."""
     from google.cloud import run_v2
@@ -73,7 +89,7 @@ def cloud_run_revision_lister(project: str, location: str) -> RevisionLister:
             "Iterable[object]",
             client.list_revisions(request=request),  # pyright: ignore[reportUnknownMemberType]
         )
-        return [str(getattr(rev, "name", "")).split("/")[-1] for rev in revisions]
+        return names_newest_first(revisions)
 
     return list_revisions
 

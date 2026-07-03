@@ -6,7 +6,13 @@ from sentinel.domain import (
     Incident,
     RootCauseClass,
 )
-from sentinel.messages import format_action_report, format_escalation, format_observation
+from sentinel.messages import (
+    format_action_report,
+    format_diagnosis_failure,
+    format_escalation,
+    format_observation,
+    format_rollback_failure,
+)
 
 
 def _incident() -> Incident:
@@ -48,4 +54,34 @@ def test_observation_is_noop_note() -> None:
     d = _decision(Action.NOOP, RootCauseClass.TRANSIENT_BLIP, False, "no action needed")
     msg = format_observation(_incident(), d)
     assert "shop" in msg
+    assert msg.isascii()
+
+
+def test_action_report_pending_verification_when_not_recovered() -> None:
+    d = _decision(Action.ROLLBACK, RootCauseClass.CODE_REGRESSION, False, "autonomous rollback")
+    msg = format_action_report(
+        _incident(), d, recovered=False, from_revision="shop-2", to_revision="shop-1"
+    )
+    assert "verification pending (manual check recommended)" in msg
+    assert "NOT confirmed" not in msg
+    assert msg.isascii()
+
+
+def test_rollback_failure_is_an_escalation_with_detail() -> None:
+    d = _decision(Action.ROLLBACK, RootCauseClass.CODE_REGRESSION, False, "autonomous rollback")
+    msg = format_rollback_failure(
+        _incident(), d, detail="no previous revision to roll back to",
+        from_revision="shop-1", to_revision="",
+    )
+    assert msg.startswith("[ESCALATION] Sentinel needs a human.")
+    assert "no previous revision" in msg
+    assert "AUTONOMOUS ROLLBACK" not in msg
+    assert msg.isascii()
+
+
+def test_diagnosis_failure_is_an_escalation_naming_the_error() -> None:
+    msg = format_diagnosis_failure(_incident(), "gemini unavailable")
+    assert msg.startswith("[ESCALATION] Sentinel needs a human.")
+    assert "shop" in msg
+    assert "gemini unavailable" in msg
     assert msg.isascii()

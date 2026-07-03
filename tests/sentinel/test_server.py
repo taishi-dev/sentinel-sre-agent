@@ -1,15 +1,22 @@
 import base64
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
+import sentinel.server as server_module
 from sentinel.diagnoser import FakeDiagnoser
-from sentinel.domain import Action, Diagnosis, Evidence, RootCauseClass
+from sentinel.domain import Action, Diagnosis, Evidence, Incident, RootCauseClass
 from sentinel.policy import PolicyConfig, PolicyGate
 from sentinel.response import FakeActionExecutor, FakeNotifier
 from sentinel.scenario import StaticTelemetryProvider
 from sentinel.server import SentinelDeps, create_app
-from sentinel.telemetry import LogEntry, TelemetrySnapshot
+from sentinel.telemetry import LogEntry, TelemetryProvider, TelemetrySnapshot
+
+
+class _RaisingDiagnoser:
+    def diagnose(self, incident: Incident, telemetry: TelemetryProvider) -> Diagnosis:
+        raise RuntimeError("gemini unavailable")
 
 
 def _snapshot() -> TelemetrySnapshot:
@@ -57,12 +64,15 @@ def _deps(diag: Diagnosis) -> tuple[SentinelDeps, FakeActionExecutor, FakeNotifi
     return deps, ex, no
 
 
-def _push_body(service: str = "shop") -> dict[str, object]:
+def _push_body(service: str = "shop", message_id: str | None = None) -> dict[str, object]:
     payload = {
         "incident": {"resource": {"labels": {"service_name": service}}, "condition_name": "x"}
     }
     data = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
-    return {"message": {"data": data}}
+    message: dict[str, object] = {"data": data}
+    if message_id is not None:
+        message["messageId"] = message_id
+    return {"message": message}
 
 
 def test_health() -> None:
@@ -97,3 +107,71 @@ def test_push_malformed_envelope_returns_400() -> None:
     deps, _, _ = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
     client = TestClient(create_app(deps))
     assert client.post("/pubsub/push", json={"nope": 1}).status_code == 400
+
+
+def test_push_diagnosis_failure_escalates_and_returns_200() -> None:
+    ex, no = FakeActionExecutor(), FakeNotifier()
+    deps = SentinelDeps(
+        telemetry=StaticTelemetryProvider(_snapshot()),
+        diagnoser=_RaisingDiagnoser(),
+        gate=_gate(),
+        executor=ex,
+        notifier=no,
+    )
+    client = TestClient(create_app(deps))
+    resp = client.post("/pubsub/push", json=_push_body())
+    assert resp.status_code == 200
+    assert resp.json() == {"action": "escalate", "requires_human": True, "executed": False}
+    assert ex.rollback_calls == []
+    assert len(no.messages) == 1
+    assert "ESCALATION" in no.messages[0]
+    assert "gemini unavailable" in no.messages[0]
+
+
+def test_push_duplicate_message_id_is_short_circuited() -> None:
+    deps, ex, no = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
+    client = TestClient(create_app(deps))
+    first = client.post("/pubsub/push", json=_push_body(message_id="m1"))
+    second = client.post("/pubsub/push", json=_push_body(message_id="m1"))
+    assert first.json()["action"] == Action.ROLLBACK.value
+    assert second.status_code == 200
+    assert second.json() == {"action": "duplicate", "requires_human": False, "executed": False}
+    assert ex.rollback_calls == ["shop"]
+    assert len(no.messages) == 1
+
+
+def test_push_dedup_expires_after_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = {"now": 0.0}
+    monkeypatch.setattr(server_module, "_now", lambda: clock["now"])
+    deps, ex, _ = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
+    client = TestClient(create_app(deps))
+    client.post("/pubsub/push", json=_push_body(message_id="m1"))
+    clock["now"] = 700.0  # past the 600-second time-to-live
+    resp = client.post("/pubsub/push", json=_push_body(message_id="m1"))
+    assert resp.json()["action"] == Action.ROLLBACK.value
+    assert ex.rollback_calls == ["shop", "shop"]
+
+
+def test_push_response_phase_failure_escalates_and_returns_200(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _boom(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("respond blew up")
+
+    monkeypatch.setattr(server_module, "respond", _boom)
+    deps, _, no = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
+    client = TestClient(create_app(deps))
+    resp = client.post("/pubsub/push", json=_push_body(message_id="m9"))
+    assert resp.status_code == 200
+    assert resp.json() == {"action": "escalate", "requires_human": True, "executed": False}
+    assert "respond blew up" in no.messages[0]
+
+
+def test_push_redelivered_malformed_body_is_deduplicated() -> None:
+    deps, _, _ = _deps(_diag(RootCauseClass.CODE_REGRESSION, Action.ROLLBACK, 0.95))
+    client = TestClient(create_app(deps))
+    bad = {"message": {"messageId": "m2"}}  # no data field: fails envelope decoding
+    assert client.post("/pubsub/push", json=bad).status_code == 400
+    resp = client.post("/pubsub/push", json=bad)
+    assert resp.status_code == 200
+    assert resp.json()["action"] == "duplicate"

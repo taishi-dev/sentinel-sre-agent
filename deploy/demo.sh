@@ -35,7 +35,7 @@ beat1() {
   echo "  injecting checkout errors and generating 5xx traffic..."
   for i in $(seq 1 20); do curl -s -o /dev/null -X POST "$SHOP_URL/checkout" -H 'Content-Type: application/json' -d '{}'; done
   _alert
-  echo "  WATCH: Slack gets [AUTONOMOUS ROLLBACK]; shop /health flips 200 -> 404 (traffic moved to the previous revision)."
+  echo "  WATCH: Slack gets [AUTONOMOUS ROLLBACK]; /checkout flips 500 -> 200 (traffic moved to the previous revision)."
 }
 
 beat2() {
