@@ -1,6 +1,6 @@
 # Sentinel デモ動画 撮影台本（約3分 / ナレーション日本語）
 
-> 本書の内容は 2026-07-03 時点のコミット ac7fe55 を基準に検証済み。引用しているコマンド・ログ行・Slack メッセージはすべてソースコードと照合済みです。
+> 本書の内容は 2026-07-04 時点のコミット 635e98f（およびライブリハーサル実測）を基準に検証済み。引用しているコマンド・ログ行・Slack メッセージはすべてソースコードと照合済みです。
 
 ## 0. 撮影前チェックリスト（順番どおりに実施）
 
@@ -30,17 +30,17 @@
 |---|---|---|
 | 0:00–0:20 | タイトル / README を一瞬表示 | 深夜、サービスの 5xx アラートで起こされる。眠い頭でログを漁り、直近のデプロイを疑い、ロールバックを打つ——この一連の対応を安全に任せられる AI エージェントを作りました。Sentinel です。Sentinel の価値はロールバックの実行ではなく、「いつ動いて、いつ動かないか」の判断にあります。 |
 | 0:20–0:40 | `./deploy/demo.sh beat1` を実行 | まずは、よくあるコード起因の障害です。デモ用の shop サービスにチェックアウト障害を注入し、5xx を発生させ、アラートを発報します。 |
-| 0:40–1:05 | Slack に `[AUTONOMOUS ROLLBACK] Sentinel acted.` が届くのを見せる | アラートは Pub/Sub 経由で Sentinel に届きます。Sentinel は Cloud Logging のログとリビジョン履歴を調査し、Gemini で根本原因を診断——Slack に自律ロールバックの報告が届きました。診断は code_regression。トラフィックは前のリビジョンへ切り替わっています。リビジョン切り替えからこの報告までは、実測でおおむね 12 秒です。 |
+| 0:40–1:05 | Slack に `[AUTONOMOUS ROLLBACK] Sentinel acted.` が届くのを見せる | アラートは Pub/Sub 経由で Sentinel に届きます。Sentinel は Cloud Logging のログとリビジョン履歴を調査し、Gemini で根本原因を診断——Slack に自律ロールバックの報告が届きました。診断は code_regression。トラフィックは前のリビジョンへ切り替わっています。アラートから復旧まで、人手ゼロで数十秒です。 |
 | 1:05–1:25 | 復旧確認コマンドを実行し `200` を見せる:<br>`curl -s -o /dev/null -w '%{http_code}\n' -X POST "https://shop-71088340431.asia-northeast1.run.app/checkout" -H 'Content-Type: application/json' -d '{}'` | 実際に checkout を叩いて確かめます。障害中は 500 でしたが——いまは 200。ユーザー影響は解消しました。ここまで人間は一切操作していません。 |
 | 1:25–1:45 | `./deploy/demo.sh reset` → `./deploy/demo.sh restore` → `./deploy/demo.sh beat2` を実行 | 次が本題です。今度は性質の違う障害——個人情報がログに漏えいする PII 障害を注入します。同じアラート、同じパイプラインです。 |
-| 1:45–2:20 | Slack に `[ESCALATION] Sentinel needs a human.`（reason: `escalated by policy gate: root cause 'pii_exposure' is sensitive`）が届くのを見せる | しかし今度は、Sentinel はロールバックしません。Slack に届いたのはエスカレーションです。理由の欄には「escalated by policy gate — root cause 'pii_exposure' is sensitive」。個人情報や セキュリティ起因の障害は、LLM の確信度がどれだけ高くても、決定論的なポリシーゲートが自律行動を禁止し、人間に引き継ぎます。この抑制はプロンプトではなく、コードで強制されています。 |
+| 1:45–2:20 | Slack に `[ESCALATION] Sentinel needs a human.`（reason: `escalated by policy gate: root cause 'pii_exposure' is sensitive`）が届くのを見せる | しかし今度は、Sentinel はロールバックしません。Slack に届いたのはエスカレーションです。理由の欄には「escalated by policy gate: root cause 'pii_exposure' is sensitive」。個人情報や セキュリティ起因の障害は、LLM の確信度がどれだけ高くても、決定論的なポリシーゲートが自律行動を禁止し、人間に引き継ぎます。この抑制はプロンプトではなく、コードで強制されています。 |
 | 2:20–2:50 | scorecard（10/10・unsafe 0）、GitHub Actions の eval gate、`scorecards/v0.3.1-live-trial.md`（5/5）を順に表示 | 安全性は「主張」ではなく「測定」です。10 種類の障害シナリオによる評価で、根本原因・アクションともに 10/10、危険な自律行動はゼロ。この評価は CI で毎プッシュ実行され、危険な自律行動が 1 件でもあれば CI が失敗します。ライブ試験でも 5 回中 5 回、自律ロールバックに成功。「動くとき」と「動かないとき」を知っている自律 SRE エージェント、Sentinel でした。 |
 
 ## 2. 撮影者向け注意（カメラに映る前に読む）
 
 1. **`beat1` のターミナル出力は `/checkout flips 500 -> 200` を案内する**（2026-07-03 のコミットで `/health` への言及を除去済み）。ナレーションもこの `/checkout` シグナルに合わせる。
-2. **カメラの前で `/health` を curl しない。** ロールバック先の旧リビジョンは `/health` ルート追加前のビルドのため 404 が返り、デモが壊れたように見える。復旧確認は必ず `/checkout`（500 → 200）で行う。
-3. Slack 報告の実測レイテンシは計測していない。実測されたのは「リビジョン切り替えまで約 12 秒」（`scorecards/v0.3.1-live-trial.md`）であり、Slack 報告はロールバック実行直後に送信されるため「おおむね同じ約 12 秒」と表現する。
+2. **復旧確認は必ず `/checkout`（500 → 200）で行う。** `/health` の応答はロールバック先リビジョンのビルド内容に依存する（過去には `/health` ルート追加前のリビジョンが 404 を返した）ため、カメラの前で `/health` を確認シグナルとして使わない。
+3. **レイテンシの言い方:** 2026-07-04 のリハーサル実測では、アラート発報から `/checkout` 復旧まで 20〜25 秒（テイク駆動スクリプトの表示も「実測 20〜25 秒」）。ナレーションは「数十秒」と言う。7月1日のライブ試験の「リビジョン切り替えまで約 12 秒」（`scorecards/v0.3.1-live-trial.md`）は当該試験の計測値であり、カメラ上の見かけ時間として約束しない。
 
 ## 3. 撮影中にビートが失敗したとき
 

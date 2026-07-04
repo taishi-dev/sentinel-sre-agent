@@ -15,6 +15,8 @@ def test_root() -> None:
     resp = client.get("/")
     assert resp.status_code == 200
     assert resp.json()["service"] == "shop"
+    assert "Sentinel" in resp.json()["about"]
+    assert resp.json()["sentinel_repo"].startswith("https://github.com/")
 
 
 def test_checkout_healthy() -> None:

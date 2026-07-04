@@ -48,7 +48,15 @@ def create_app(state: FaultState | None = None) -> FastAPI:
 
     @app.get("/")
     def root() -> dict[str, str]:  # type: ignore[misc]  # registered via decorator side-effect
-        return {"service": "shop", "status": "ok"}
+        return {
+            "service": "shop",
+            "status": "ok",
+            "about": (
+                "Demo victim service monitored by Sentinel, an autonomous SRE agent "
+                "that diagnoses incidents with Gemini and rolls back or escalates"
+            ),
+            "sentinel_repo": "https://github.com/taishi-dev/sentinel-sre-agent",
+        }
 
     @app.post("/checkout")
     def checkout() -> StarletteResponse:  # type: ignore[misc]  # registered via decorator side-effect
