@@ -41,6 +41,11 @@ done
 # traffic control on shop ONLY, plus the two grants a Cloud Run traffic update needs:
 gcloud run services add-iam-policy-binding shop --region asia-northeast1 \
   --member="serviceAccount:sentinel-agent@sentinel-sre-2026.iam.gserviceaccount.com" --role="roles/run.developer"
+# poll the traffic-update long-running operation (operations are location-scoped,
+# so the service-scoped run.developer grant above does NOT cover run.operations.get;
+# without this, operation.result() in the traffic shifter fails with 403):
+gcloud projects add-iam-policy-binding sentinel-sre-2026 \
+  --member="serviceAccount:sentinel-agent@sentinel-sre-2026.iam.gserviceaccount.com" --role="roles/run.viewer"
 # read the image being routed:
 gcloud artifacts repositories add-iam-policy-binding cloud-run-source-deploy --location=asia-northeast1 \
   --member="serviceAccount:sentinel-agent@sentinel-sre-2026.iam.gserviceaccount.com" --role="roles/artifactregistry.reader"
