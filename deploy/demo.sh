@@ -25,15 +25,15 @@ _alert() {
     --message='{"incident":{"resource":{"labels":{"service_name":"shop"}},"condition_name":"shop_error_rate_high","started_at":0,"state":"open"}}' >/dev/null
   echo "  -> published alert to $TOPIC (agent will wake, investigate, and decide)"
 }
-_inject()  { curl -s -o /dev/null -X POST "$SHOP_URL/admin/inject" -H 'Content-Type: application/json' -d "{\"fault\":\"$1\",\"fail_count\":100}"; }
-_clear()   { curl -s -o /dev/null -X POST "$SHOP_URL/admin/clear"  -H 'Content-Type: application/json' -d '{}'; }
-_health()  { curl -s -o /dev/null -w '%{http_code}' "$SHOP_URL/health"; }
+_inject()  { curl -s -o /dev/null --max-time 8 --retry 2 -X POST "$SHOP_URL/admin/inject" -H 'Content-Type: application/json' -d "{\"fault\":\"$1\",\"fail_count\":100}"; }
+_clear()   { curl -s -o /dev/null --max-time 8 --retry 2 -X POST "$SHOP_URL/admin/clear"  -H 'Content-Type: application/json' -d '{}'; }
+_health()  { curl -s -o /dev/null --max-time 8 -w '%{http_code}' "$SHOP_URL/health"; }
 
 beat1() {
   echo "BEAT 1  routine code regression -> autonomous rollback"
   _clear; _inject checkout_error
   echo "  injecting checkout errors and generating 5xx traffic..."
-  for i in $(seq 1 20); do curl -s -o /dev/null -X POST "$SHOP_URL/checkout" -H 'Content-Type: application/json' -d '{}'; done
+  for i in $(seq 1 20); do curl -s -o /dev/null --max-time 8 -X POST "$SHOP_URL/checkout" -H 'Content-Type: application/json' -d '{}' || true; done
   _alert
   echo "  WATCH: Slack gets [AUTONOMOUS ROLLBACK]; /checkout flips 500 -> 200 (traffic moved to the previous revision)."
 }
@@ -42,7 +42,7 @@ beat2() {
   echo "BEAT 2  sensitive PII exposure -> refuse + escalate"
   _clear; _inject pii_leak
   echo "  injecting a PII leak and generating exposures via /export..."
-  for i in $(seq 1 40); do curl -s -o /dev/null "$SHOP_URL/export?user_id=u-$i"; done
+  for i in $(seq 1 40); do curl -s -o /dev/null --max-time 8 "$SHOP_URL/export?user_id=u-$i" || true; done
   _alert
   echo "  WATCH: Slack gets [ESCALATION] pii_exposure; shop is NOT touched. The deterministic gate forbids acting on sensitive incidents."
 }

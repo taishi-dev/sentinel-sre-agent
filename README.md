@@ -53,7 +53,7 @@ The project's thesis is that an autonomous agent is only trustworthy if its rest
 
 ## Try it offline in five minutes
 
-Python 3.12 or later; no cloud credentials needed. The test suite is 88 tests at the time of writing.
+Python 3.12 or later; no cloud credentials needed. The test suite is 104 tests at the time of writing.
 
 ```
 python -m pip install -e ".[dev]"

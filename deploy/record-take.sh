@@ -15,10 +15,25 @@ REGION="${REGION:-asia-northeast1}"
 SHOP_URL="${SHOP_URL:-https://shop-71088340431.asia-northeast1.run.app}"
 GCLOUD="${GCLOUD:-gcloud}"
 
+# Any abnormal exit (set -e abort, Ctrl-C) must not leave shop mid-fault:
+# restore traffic + clear faults + drop queued alerts before exiting.
+cleanup_on_abort() {
+  ec=$?
+  if [ "$ec" -ne 0 ]; then
+    echo "ABORT (exit $ec) — shop を復旧して終了します" >&2
+    ./deploy/demo.sh restore || true
+    ./deploy/demo.sh reset || true
+  fi
+  exit "$ec"
+}
+trap cleanup_on_abort EXIT
+
 cue()  { printf '\n\033[1;36m════ %s ════\033[0m\n' "$*"; }
 say()  { printf '\033[1;33m読む: %s\033[0m\n' "$*"; }
+cls()  { clear 2>/dev/null || printf '\033c'; }
 pause() {
-  if [ "${AUTO:-}" = "1" ]; then sleep 2; else read -r -p $'\n   [Enter で次へ]\n'; fi
+  # `|| true`: EOF on stdin must never abort a live take.
+  if [ "${AUTO:-}" = "1" ]; then sleep 2; else read -r -p $'\n   [Enter で次へ]\n' || true; fi
 }
 run() {  # print the command like a typed prompt, then execute it
   printf '\n\033[1;32m$ %s\033[0m\n' "$*"
@@ -26,32 +41,32 @@ run() {  # print the command like a typed prompt, then execute it
   "$@"
 }
 checkout_code() {
-  curl -s -o /dev/null -w '%{http_code}' -X POST "$SHOP_URL/checkout" \
+  curl -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST "$SHOP_URL/checkout" \
     -H 'Content-Type: application/json' -d '{}'
 }
 latest_decision() {
   "$GCLOUD" run services logs read sentinel --region "$REGION" --project "$PROJECT" \
-    --limit 20 2>/dev/null | grep "sentinel decision" | tail -1
+    --limit 50 2>/dev/null | grep "sentinel decision" | tail -1
 }
 
 # ---- preflight (before the recorder starts) --------------------------------
-clear
+cls
 cue "準備チェック（録画前）"
 ./deploy/demo.sh reset
 ./deploy/demo.sh restore
-code="$(checkout_code)"
+code="$(checkout_code || echo 000)"
 echo "checkout preflight: $code"
 if [ "$code" != "200" ]; then
   echo "ABORT: /checkout が 200 ではない。/admin/clear を実行してやり直す。" >&2
   exit 1
 fi
 baseline_decision="$(latest_decision || true)"
-clear
+cls
 cue "録画を開始してから Enter（この画面から本番）"
 pause
 
 # ---- 0:00 hook --------------------------------------------------------------
-clear
+cls
 printf '\n\033[1m  Sentinel — an autonomous SRE agent that knows when NOT to act\n'
 printf '  DevOps × AI Agent Hackathon 2026\033[0m\n'
 say "フック（0:00-0:20 の行）を読む"
@@ -62,8 +77,8 @@ cue "BEAT 1  コード起因の障害 → 自律ロールバック"
 say "0:20-0:40 の行を読みながら待つ"
 run ./deploy/demo.sh beat1
 printf '\n障害発生中の checkout（500 が出る）:\n'
-run bash -c "curl -s -o /dev/null -w '%{http_code}\n' -X POST '$SHOP_URL/checkout' -H 'Content-Type: application/json' -d '{}'"
-say "0:40-1:05 の行を読む — Slack に [AUTONOMOUS ROLLBACK] が届くのを待つ（約25秒）"
+run curl -s -o /dev/null -w '%{http_code}\n' --max-time 8 -X POST "$SHOP_URL/checkout" -H 'Content-Type: application/json' -d '{}'
+say "0:40-1:05 の行を読む — Slack に [AUTONOMOUS ROLLBACK] が届くのを待つ（実測 20〜25 秒）"
 printf 'ロールバック完了を待機中 '
 recovered=""
 for _ in $(seq 1 30); do
@@ -78,7 +93,7 @@ if [ -z "$recovered" ]; then
 fi
 cue "ロールバック完了 — 復旧を実演"
 printf '復旧後の checkout（200 が出る）:\n'
-run bash -c "curl -s -o /dev/null -w '%{http_code}\n' -X POST '$SHOP_URL/checkout' -H 'Content-Type: application/json' -d '{}'"
+run curl -s -o /dev/null -w '%{http_code}\n' --max-time 8 -X POST "$SHOP_URL/checkout" -H 'Content-Type: application/json' -d '{}'
 say "1:05-1:25 の行を読む（障害中は500、いまは200）"
 pause
 
@@ -88,7 +103,7 @@ say "1:25-1:45 の行を読みながら待つ"
 run ./deploy/demo.sh reset
 run ./deploy/demo.sh restore
 run ./deploy/demo.sh beat2
-say "1:45-2:20 の行を読む — Slack に [ESCALATION] が届くのを待つ（約25秒）"
+say "1:45-2:20 の行を読む — Slack に [ESCALATION] が届くのを待つ（実測 20〜25 秒）"
 printf 'エスカレーション判断を待機中 '
 decision=""
 for _ in $(seq 1 30); do
