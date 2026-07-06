@@ -29,11 +29,16 @@ cleanup_on_abort() {
 trap cleanup_on_abort EXIT
 
 cue()  { printf '\n\033[1;36m════ %s ════\033[0m\n' "$*"; }
-say()  { printf '\033[1;33m読む: %s\033[0m\n' "$*"; }
+say() {
+  # Presenter-only reading prompts. Hidden during the real take (the off-screen
+  # transcript is keyed to the banner cues); PROMPTS=1 shows them for rehearsal.
+  if [ "${PROMPTS:-}" = "1" ]; then printf '\033[1;33m読む: %s\033[0m\n' "$*"; fi
+}
 cls()  { clear 2>/dev/null || printf '\033c'; }
 pause() {
-  # `|| true`: EOF on stdin must never abort a live take.
-  if [ "${AUTO:-}" = "1" ]; then sleep 2; else read -r -p $'\n   [Enter で次へ]\n' || true; fi
+  # `|| true`: EOF on stdin must never abort a live take. The prompt is dim and
+  # minimal so it stays unobtrusive on camera.
+  if [ "${AUTO:-}" = "1" ]; then sleep 2; else read -r -p $'\n\033[2m[Enter]\033[0m ' || true; fi
 }
 run() {  # print the command like a typed prompt, then execute it
   printf '\n\033[1;32m$ %s\033[0m\n' "$*"
@@ -130,7 +135,7 @@ say "2:20-2:50 の行を読む → 読み終わったら Enter"
 pause
 
 # ---- cleanup ------------------------------------------------------------------
-cue "録画を停止してから Enter（後片付けが走る）"
+printf '\n\033[2m（録画を停止してから Enter — 後片付けが走る）\033[0m\n'
 pause
 run ./deploy/demo.sh restore
 run ./deploy/demo.sh reset
