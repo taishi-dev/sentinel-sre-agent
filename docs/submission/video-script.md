@@ -1,4 +1,4 @@
-# Sentinel デモ動画 撮影台本（約3分 / ナレーション日本語）
+# Sentinel デモ動画 撮影台本（約4分30秒 / ナレーション日本語）
 
 > 本書の内容は 2026-07-04 時点のコミット 635e98f（およびライブリハーサル実測）を基準に検証済み。引用しているコマンド・ログ行・Slack メッセージはすべてソースコードと照合済みです。
 
@@ -24,7 +24,7 @@
 
 > **本番テイクは `./deploy/record-take.sh` 一発で進行できる。** テイク駆動スクリプトがすべてのコマンドを画面上で実行し、実イベント（checkout の 500→200、エスカレーション判断ログ）を待機し、各ナレーション行の読み上げ位置を画面に表示する。撮影者は録画開始・ナレーション読み上げ・Enter キーだけを担当する（2026-07-04 に無人検証済み）。
 
-## 1. ナレーション進行表（合計 約2分50秒）
+## 1. ナレーション進行表（合計 約4分30秒）
 
 | 時間 | 画面上の操作 | ナレーション（日本語） |
 |---|---|---|
@@ -34,7 +34,9 @@
 | 1:05–1:25 | 復旧確認コマンドを実行し `200` を見せる:<br>`curl -s -o /dev/null -w '%{http_code}\n' -X POST "https://shop-71088340431.asia-northeast1.run.app/checkout" -H 'Content-Type: application/json' -d '{}'` | 実際に checkout を叩いて確かめます。障害中は 500 でしたが——いまは 200。ユーザー影響は解消しました。ここまで人間は一切操作していません。 |
 | 1:25–1:45 | `./deploy/demo.sh reset` → `./deploy/demo.sh restore` → `./deploy/demo.sh beat2` を実行 | 次が本題です。今度は性質の違う障害——個人情報がログに漏えいする PII 障害を注入します。同じアラート、同じパイプラインです。 |
 | 1:45–2:20 | Slack に `[ESCALATION] Sentinel needs a human.`（reason: `escalated by policy gate: root cause 'pii_exposure' is sensitive`）が届くのを見せる | しかし今度は、Sentinel はロールバックしません。Slack に届いたのはエスカレーションです。理由の欄には「escalated by policy gate: root cause 'pii_exposure' is sensitive」。個人情報や セキュリティ起因の障害は、LLM の確信度がどれだけ高くても、決定論的なポリシーゲートが自律行動を禁止し、人間に引き継ぎます。この抑制はプロンプトではなく、コードで強制されています。 |
-| 2:20–2:50 | scorecard（10/10・unsafe 0）、GitHub Actions の eval gate、`scorecards/v0.3.1-live-trial.md`（5/5）を順に表示 | 安全性は「主張」ではなく「測定」です。10 種類の障害シナリオによる評価で、根本原因・アクションともに 10/10、危険な自律行動はゼロ。この評価は CI で毎プッシュ実行され、危険な自律行動が 1 件でもあれば CI が失敗します。ライブ試験でも 5 回中 5 回、自律ロールバックに成功。「動くとき」と「動かないとき」を知っている自律 SRE エージェント、Sentinel でした。 |
+| 2:20–2:50 | scorecard（10/10・unsafe 0）、GitHub Actions の eval gate、`scorecards/v0.3.1-live-trial.md`（5/5）を順に表示 | 安全性は「主張」ではなく「測定」です。10 種類の障害シナリオによる評価で、根本原因・アクションともに 10/10、危険な自律行動はゼロ。ベースライン（初期実装）の診断は 10 問中 2 問しか当たりませんでしたが、いまは 10/10 です（`scorecards/v0.1.0-baseline.md`）。この評価は CI で毎プッシュ実行され、危険な自律行動が 1 件でもあれば CI が失敗します。ライブ試験でも 5 回中 5 回、自律ロールバックに成功。「動くとき」と「動かないとき」を知っている自律 SRE エージェント、Sentinel でした。 |
+| 2:50–3:10 | `BEAT3=1 ./deploy/record-take.sh` の Beat 3 が `git push origin V1-sentinel/exp-red-ci-demo` を実行 | ただし、この評価ゲートが本当に機能することも実演します。危険な自律行動を 1 件含むブランチを、いま push します。 |
+| 3:10–4:30 | GitHub Actions で `eval gate` ジョブを開き（unit ジョブも赤になるが eval gate を開く）、ログの `EVAL GATE FAILED: 1 unsafe autonomous action(s)` を指す | CI が走ります。eval gate が——赤。ログには `EVAL GATE FAILED: 1 unsafe autonomous action(s)`。危険な自律行動が 1 件でも入れば、このゲートがビルドを止め、マージさせません。安全性は主張ではなく、コードで測定・強制されています。 |
 
 ## 2. 撮影者向け注意（カメラに映る前に読む）
 

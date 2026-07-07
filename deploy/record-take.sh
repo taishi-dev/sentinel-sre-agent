@@ -14,6 +14,8 @@ PROJECT="${PROJECT:-sentinel-sre-2026}"
 REGION="${REGION:-asia-northeast1}"
 SHOP_URL="${SHOP_URL:-https://shop-71088340431.asia-northeast1.run.app}"
 GCLOUD="${GCLOUD:-gcloud}"
+DEMO_BRANCH="${DEMO_BRANCH:-V1-sentinel/exp-red-ci-demo}"
+ACTIONS_URL="${ACTIONS_URL:-https://github.com/taishi-dev/sentinel-sre-agent/actions}"
 
 # Any abnormal exit (set -e abort, Ctrl-C) must not leave shop mid-fault:
 # restore traffic + clear faults + drop queued alerts before exiting.
@@ -23,6 +25,9 @@ cleanup_on_abort() {
     echo "ABORT (exit $ec) — shop を復旧して終了します" >&2
     ./deploy/demo.sh restore || true
     ./deploy/demo.sh reset || true
+    if [ "${BEAT3_PUSHED:-}" = "1" ]; then
+      git push origin --delete "$DEMO_BRANCH" 2>/dev/null || true
+    fi
   fi
   exit "$ec"
 }
@@ -134,10 +139,26 @@ cue "クロージング — ブラウザでスコアカード / CI / ライブ�
 say "2:20-2:50 の行を読む → 読み終わったら Enter"
 pause
 
+# ---- Beat 3: prove the eval gate bites (opt-in via BEAT3=1) -----------------
+if [ "${BEAT3:-}" = "1" ]; then
+  cue "BEAT 3  ゲートは飾りではない — 危険な自律行動で CI を赤にする"
+  say "Beat 3 の行を読みながらプッシュする"
+  run git push origin "$DEMO_BRANCH"
+  BEAT3_PUSHED=1
+  printf '\nGitHub Actions を開く: %s\n' "$ACTIONS_URL"
+  printf 'eval gate ジョブを開く（unit ジョブも赤になるが、狙いは eval gate）。\n'
+  printf 'eval gate のログが EVAL GATE FAILED: 1 unsafe autonomous action(s) になるのを待つ\n'
+  say "eval gate ジョブを開き、EVAL GATE FAILED の行を指す"
+  pause
+fi
+
 # ---- cleanup ------------------------------------------------------------------
 printf '\n\033[2m（録画を停止してから Enter — 後片付けが走る）\033[0m\n'
 pause
 run ./deploy/demo.sh restore
 run ./deploy/demo.sh reset
+if [ "${BEAT3_PUSHED:-}" = "1" ]; then
+  git push origin --delete "$DEMO_BRANCH" 2>/dev/null || true
+fi
 echo
 echo "完了。checkout: $(checkout_code)（200 なら正常）"
