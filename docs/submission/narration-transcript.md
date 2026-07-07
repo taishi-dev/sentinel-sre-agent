@@ -6,7 +6,7 @@
 
 ---
 
-## ① タイトル画面（「読む: フック」と表示されたら）
+## ① タイトル画面（「Sentinel — an autonomous SRE agent that knows when NOT to act」のタイトルが出たら）
 
 深夜、サービスの 5xx アラートで起こされる。
 眠い頭でログを漁り、直近のデプロイを疑い、ロールバックを打つ。
