@@ -16,7 +16,7 @@ Cloud Monitoring のアラートを起点に、ログとリビジョン履歴を
 
 ## 動画
 
-（撮影後に YouTube / Vimeo の URL を記入 — 台本: `docs/submission/video-script.md`）
+https://www.youtube.com/watch?v=7I-2-rrsw3o （台本: `docs/submission/video-script.md`）
 
 ## システム構成
 
@@ -62,4 +62,4 @@ Cloud Run 上でサービスを運用しているが、専任の SRE ローテ�
 
 1. **GitHub リポジトリ URL:** https://github.com/taishi-dev/sentinel-sre-agent
 2. **デプロイしたプロジェクトの URL:** https://shop-71088340431.asia-northeast1.run.app （エージェントの動作そのものは動画と GitHub の scorecards / README でご確認ください。上記 URL は監視対象のデモサービス（公開）で、ルートページに本プロジェクトへの案内を表示します。エージェント本体の Sentinel サービスは、本番運用を想定した設計判断として認証必須イングレス＋最小権限サービスアカウントで保護しているため直接公開していません。）
-3. **Proto Pedia 作品 URL:** （エントリ作成後に記入）
+3. **Proto Pedia 作品 URL:** https://protopedia.net/prototype/8850
