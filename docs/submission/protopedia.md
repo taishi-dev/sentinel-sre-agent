@@ -55,6 +55,7 @@ Cloud Run 上でサービスを運用しているが、専任の SRE ローテ�
 
 - GitHub リポジトリ（公開）: https://github.com/taishi-dev/sentinel-sre-agent
 - デモ対象サービス（shop・公開）: https://shop-71088340431.asia-northeast1.run.app
+- 審査での通知ライブ確認（任意）: Sentinel の判断（自律ロールバック／エスカレーション）は Slack に通知されます。ライブ再現をご希望の場合は運営経由でお問い合わせください。検証用の Slack にご招待し、公開サービスへの障害注入から通知到達までをご確認いただけます（対応手順: `deploy/judging-slack.md`）。動画（beat 1・beat 2）にも同じ挙動を収録済みです。
 
 ---
 
